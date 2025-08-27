@@ -66,6 +66,13 @@ var newCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Project '%s' created successfully in '%s'\n", projectName, destDir)
+		fmt.Printf("Next steps:\n")
+		fmt.Printf("  1. cd %s\n", projectName)
+		fmt.Printf("  2. go mod tidy\n")
+		fmt.Printf("  3. make\n")
+		fmt.Printf("  4. ./bin/gouno web")
+		fmt.Printf("  5. Open http://localhost:8080 in your browser\n")
+		fmt.Printf("  6. Start coding!\n")
 	},
 }
 
