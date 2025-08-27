@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -14,7 +15,6 @@ import (
 type TemplateData struct {
 	ModulePath  string
 	ProjectName string
-	RepoURL     string
 }
 
 var newCmd = &cobra.Command{
@@ -27,13 +27,33 @@ var newCmd = &cobra.Command{
 		templateDir, _ := cmd.Flags().GetString("template")
 
 		if modulePath == "" {
-			modulePath = "github.com/" + os.Getenv("USER") + "/" + projectName
+			modulePath = projectName
+		}
+
+		// If templateDir is not provided, clone from default repository
+		if templateDir == "./templates" {
+			tempDir, err := os.MkdirTemp("", "gouno-template-")
+			if err != nil {
+				fmt.Printf("Error creating temporary directory: %v\n", err)
+				os.Exit(1)
+			}
+			defer os.RemoveAll(tempDir) // Clean up the temporary directory
+
+			fmt.Printf("Cloning default template from https://github.com/rushairer/gouno-template to %s\n", tempDir)
+			cmd := exec.Command("git", "clone", "https://github.com/rushairer/gouno-template", tempDir)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			err = cmd.Run()
+			if err != nil {
+				fmt.Printf("Error cloning template repository: %v\n", err)
+				os.Exit(1)
+			}
+			templateDir = tempDir
 		}
 
 		data := TemplateData{
 			ModulePath:  modulePath,
 			ProjectName: projectName,
-			RepoURL:     fmt.Sprintf("https://github.com/%s/%s.git", os.Getenv("USER"), projectName),
 		}
 
 		fmt.Printf("Creating new project '%s' with module path '%s' from template '%s'\n", projectName, modulePath, templateDir)
@@ -53,7 +73,7 @@ func init() {
 	rootCmd.AddCommand(newCmd)
 
 	newCmd.Flags().StringP("module", "m", "", "Go module path (e.g., github.com/your/project)")
-	newCmd.Flags().StringP("template", "t", "./templates", "Path to the template directory")
+	newCmd.Flags().StringP("template", "t", "./templates", "Path to the template directory (default will clone from https://github.com/rushairer/gouno-template)")
 }
 
 func copyTemplate(src, dest string, data TemplateData) error {
