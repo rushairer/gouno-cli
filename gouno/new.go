@@ -30,17 +30,18 @@ var newCmd = &cobra.Command{
 			modulePath = projectName
 		}
 
-		// If templateDir is not provided, clone from default repository
-		if templateDir == "./templates" {
+		// Handle template directory logic
+		if strings.HasPrefix(templateDir, "git@") || strings.HasPrefix(templateDir, "https://") {
+			// Git URL provided - clone from the specified URL
 			tempDir, err := os.MkdirTemp("", "gouno-template-")
 			if err != nil {
 				fmt.Printf("Error creating temporary directory: %v\n", err)
 				os.Exit(1)
 			}
-			defer os.RemoveAll(tempDir) // Clean up the temporary directory
+			defer os.RemoveAll(tempDir)
 
-			fmt.Printf("Cloning default template from https://github.com/rushairer/gouno-template to %s\n", tempDir)
-			cmd := exec.Command("git", "clone", "https://github.com/rushairer/gouno-template", tempDir)
+			fmt.Printf("Cloning template from %s to %s\n", templateDir, tempDir)
+			cmd := exec.Command("git", "clone", templateDir, tempDir)
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			err = cmd.Run()
@@ -49,6 +50,38 @@ var newCmd = &cobra.Command{
 				os.Exit(1)
 			}
 			templateDir = tempDir
+		} else if templateDir == "./templates" {
+			// Default case - check if local ./templates exists, otherwise clone from default
+			if _, err := os.Stat("./templates"); os.IsNotExist(err) {
+				// Local ./templates doesn't exist, clone from default repository
+				tempDir, err := os.MkdirTemp("", "gouno-template-")
+				if err != nil {
+					fmt.Printf("Error creating temporary directory: %v\n", err)
+					os.Exit(1)
+				}
+				defer os.RemoveAll(tempDir)
+
+				fmt.Printf("Local templates directory not found, cloning default template from https://github.com/rushairer/gouno-template to %s\n", tempDir)
+				cmd := exec.Command("git", "clone", "https://github.com/rushairer/gouno-template", tempDir)
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				err = cmd.Run()
+				if err != nil {
+					fmt.Printf("Error cloning template repository: %v\n", err)
+					os.Exit(1)
+				}
+				templateDir = tempDir
+			} else {
+				// Local ./templates exists, use it
+				fmt.Printf("Using local templates directory: ./templates\n")
+			}
+		} else {
+			// Custom local path provided
+			if _, err := os.Stat(templateDir); os.IsNotExist(err) {
+				fmt.Printf("Error: template directory '%s' does not exist\n", templateDir)
+				os.Exit(1)
+			}
+			fmt.Printf("Using local template directory: %s\n", templateDir)
 		}
 
 		data := TemplateData{
