@@ -160,9 +160,6 @@ func shouldSkipFile(relPath string) bool {
 		if strings.HasPrefix(part, ".git") {
 			return true
 		}
-		if strings.HasSuffix(part, ".tmpl") {
-			return true
-		}
 	}
 	return false
 }

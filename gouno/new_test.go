@@ -65,8 +65,6 @@ func TestShouldSkipFile(t *testing.T) {
 		{"README.md", false},
 		{"internal/domain/.gitkeep", true},
 		{"config/development.yaml", false},
-		{"domain.tmpl", true},
-		{"service.tmpl", true},
 	}
 
 	for _, tt := range tests {

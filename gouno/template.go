@@ -86,22 +86,37 @@ var templateInstallCmd = &cobra.Command{
 
 		// 判断来源：本地路径 or git URL
 		if info, err := os.Stat(source); err == nil && info.IsDir() {
-			// 本地目录复制
+			// 本地目录：优先使用 templates/ 子目录
+			tmplSubdir := filepath.Join(source, "templates")
+			if _, err := os.Stat(tmplSubdir); err == nil {
+				source = tmplSubdir
+			}
 			if err := copyDir(source, destPath); err != nil {
 				return fmt.Errorf("failed to copy template: %w", err)
 			}
 			cmd.Printf("Template set %q installed from %s\n", name, source)
 		} else {
 			// git clone
-			gitCmd := exec.Command("git", "clone", source, destPath)
+			tempDir, err := os.MkdirTemp("", "gouno-install-")
+			if err != nil {
+				return fmt.Errorf("failed to create temp directory: %w", err)
+			}
+			defer os.RemoveAll(tempDir)
+
+			gitCmd := exec.Command("git", "clone", source, tempDir)
 			gitCmd.Stdout = os.Stdout
 			gitCmd.Stderr = os.Stderr
 			if err := gitCmd.Run(); err != nil {
-				os.RemoveAll(destPath)
 				return fmt.Errorf("failed to clone template: %w", err)
 			}
-			// 清理 .git 目录
-			os.RemoveAll(filepath.Join(destPath, ".git"))
+			// 优先使用 templates/ 子目录
+			tmplSubdir := filepath.Join(tempDir, "templates")
+			if _, err := os.Stat(tmplSubdir); err == nil {
+				tempDir = tmplSubdir
+			}
+			if err := copyDir(tempDir, destPath); err != nil {
+				return fmt.Errorf("failed to copy template: %w", err)
+			}
 			cmd.Printf("Template set %q installed from %s\n", name, source)
 		}
 
