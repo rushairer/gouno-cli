@@ -113,6 +113,17 @@ var newCmd = &cobra.Command{
 			return fmt.Errorf("creating project: %w", err)
 		}
 
+		// 写入 .gouno.yaml 配置
+		templateSet, _ := cmd.Flags().GetString("template-set")
+		if templateSet != "" {
+			cfgContent := fmt.Sprintf("template-set: %s\n", templateSet)
+			cfgPath := filepath.Join(destDir, ".gouno.yaml")
+			if err := os.WriteFile(cfgPath, []byte(cfgContent), 0644); err != nil {
+				return fmt.Errorf("writing .gouno.yaml: %w", err)
+			}
+			fmt.Printf("Template set '%s' saved to .gouno.yaml\n", templateSet)
+		}
+
 		fmt.Printf("Project '%s' created successfully in '%s'\n", projectName, destDir)
 		fmt.Printf("Next steps:\n")
 		fmt.Printf("  1. cd %s\n", projectName)
@@ -129,6 +140,7 @@ func init() {
 
 	newCmd.Flags().StringP("module", "m", "", "Go module path (e.g., github.com/your/project)")
 	newCmd.Flags().StringP("template", "t", "./templates", "Path to the template directory (default will clone from https://github.com/rushairer/gouno-template)")
+	newCmd.Flags().String("template-set", "", "Template set name for code generation (saved to .gouno.yaml)")
 }
 
 // shouldSkipFile 判断是否跳过该文件/目录（检查路径中所有组件）
