@@ -19,9 +19,9 @@ type TemplateData struct {
 	ProjectName string
 }
 
-var projectNameRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+var projectNameRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_-]*$`)
 
-// validateProjectName 校验项目名：必须是合法的 Go 标识符，不含路径分隔符
+// validateProjectName 校验项目名：合法的目录名，不含路径穿越字符
 func validateProjectName(name string) error {
 	if name == "" {
 		return fmt.Errorf("project name cannot be empty")
@@ -36,7 +36,7 @@ func validateProjectName(name string) error {
 		return fmt.Errorf("project name must start with a letter or underscore: %s", name)
 	}
 	if !projectNameRegex.MatchString(name) {
-		return fmt.Errorf("project name must be a valid identifier (letters, digits, underscores): %s", name)
+		return fmt.Errorf("project name must be a valid identifier (letters, digits, underscores, hyphens): %s", name)
 	}
 	return nil
 }

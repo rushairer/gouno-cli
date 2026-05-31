@@ -13,6 +13,8 @@ func TestValidateProjectName(t *testing.T) {
 		"_private",
 		"Project123",
 		"a",
+		"demo-app",
+		"my-cool-project",
 	}
 
 	for _, name := range validNames {
