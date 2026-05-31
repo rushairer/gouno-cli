@@ -1,7 +1,7 @@
 package gouno
 
 import (
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -9,9 +9,8 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "gouno-cli",
-	Short: "gouno-cli is a tool to generate go code",
-	Long: `gouno-cli is a tool to generate go code.
-It can generate go code from proto file.`,
+	Short: "gouno-cli is a tool to scaffold Go web projects",
+	Long:  "gouno-cli is a tool to scaffold Go web projects from gouno-template.",
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},
@@ -19,7 +18,7 @@ It can generate go code from proto file.`,
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		log.Fatalf("Error executing root command: %v", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }
