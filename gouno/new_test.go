@@ -1,6 +1,7 @@
 package gouno
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -201,6 +202,48 @@ func TestCopyTemplateCleanupOnError(t *testing.T) {
 
 	// 验证目标目录中的文件被正确写入（bad.go 应该有错误）
 	// 注意：cleanup 由调用方（RunE 中的 os.RemoveAll）负责，copyTemplate 本身不清理
+}
+
+func TestTidyProjectRunsGoModTidy(t *testing.T) {
+	orig := runExternalCommand
+	defer func() { runExternalCommand = orig }()
+
+	var gotDir, gotName string
+	var gotArgs []string
+	runExternalCommand = func(dir, name string, args ...string) error {
+		gotDir = dir
+		gotName = name
+		gotArgs = append([]string(nil), args...)
+		return nil
+	}
+
+	if err := tidyProject("/tmp/project"); err != nil {
+		t.Fatalf("tidyProject() error: %v", err)
+	}
+	if gotDir != "/tmp/project" || gotName != "go" || strings.Join(gotArgs, " ") != "mod tidy" {
+		t.Fatalf("unexpected command: dir=%q name=%q args=%q", gotDir, gotName, strings.Join(gotArgs, " "))
+	}
+}
+
+func TestTidyProjectWrapsError(t *testing.T) {
+	orig := runExternalCommand
+	defer func() { runExternalCommand = orig }()
+
+	expected := errors.New("boom")
+	runExternalCommand = func(_ string, _ string, _ ...string) error {
+		return expected
+	}
+
+	err := tidyProject("/tmp/project")
+	if err == nil {
+		t.Fatal("tidyProject() = nil; want error")
+	}
+	if !strings.Contains(err.Error(), "running go mod tidy") {
+		t.Fatalf("tidyProject() error = %v; want context", err)
+	}
+	if !errors.Is(err, expected) {
+		t.Fatalf("tidyProject() error = %v; want wrapped expected error", err)
+	}
 }
 
 func contains(s, substr string) bool {

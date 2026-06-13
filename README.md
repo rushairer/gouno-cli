@@ -32,7 +32,6 @@ This clones the default [gouno-template](https://github.com/rushairer/gouno-temp
 
 ```bash
 cd my-service
-go mod tidy
 make dev
 # → http://localhost:8080
 ```
@@ -44,6 +43,7 @@ make dev
 | `--module` | `-m` | project name | Go module path (e.g., `github.com/you/project`) |
 | `--template` | `-t` | `./templates` | Local path or git URL to template directory |
 | `--template-set` | | | Template set name (saved to `.gouno.yaml` for code generation) |
+| `--skip-tidy` | | `false` | Skip running `go mod tidy` after project creation |
 
 **Examples:**
 
@@ -92,7 +92,8 @@ gouno-cli --version
 1. `gouno-cli new` clones a template repository (default or specified).
 2. Files containing `{{` are rendered as Go templates using the provided module path and project name.
 3. Other files are copied as-is (skipping `.git/`, `templates/`, `bin/`).
-4. On failure, all partially created files are cleaned up automatically.
+4. `go mod tidy` runs automatically unless `--skip-tidy` is set.
+5. On failure, all partially created files are cleaned up automatically.
 
 ## Related Projects
 

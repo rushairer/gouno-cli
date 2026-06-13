@@ -32,7 +32,6 @@ gouno-cli new my-service -m github.com/you/my-service
 
 ```bash
 cd my-service
-go mod tidy
 make dev
 # → http://localhost:8080
 ```
@@ -44,6 +43,7 @@ make dev
 | `--module` | `-m` | 项目名称 | Go module 路径（如 `github.com/you/project`） |
 | `--template` | `-t` | `./templates` | 本地路径或 Git URL 指向模板目录 |
 | `--template-set` | | | 模板集名称（保存到 `.gouno.yaml` 供代码生成使用） |
+| `--skip-tidy` | | `false` | 创建项目后跳过 `go mod tidy` |
 
 **示例：**
 
@@ -92,7 +92,8 @@ gouno-cli --version
 1. `gouno-cli new` 克隆模板仓库（默认或指定的）。
 2. 包含 `{{` 的文件使用提供的 module 路径和项目名进行 Go 模板渲染。
 3. 其他文件直接复制（跳过 `.git/`、`templates/`、`bin/`）。
-4. 失败时自动清理所有已创建的部分文件。
+4. 默认自动执行 `go mod tidy`，除非传入 `--skip-tidy`。
+5. 失败时自动清理所有已创建的部分文件。
 
 ## 相关项目
 

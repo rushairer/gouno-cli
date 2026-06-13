@@ -20,6 +20,13 @@ type TemplateData struct {
 }
 
 var projectNameRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_-]*$`)
+var runExternalCommand = func(dir, name string, args ...string) error {
+	externalCmd := exec.Command(name, args...)
+	externalCmd.Dir = dir
+	externalCmd.Stdout = os.Stdout
+	externalCmd.Stderr = os.Stderr
+	return externalCmd.Run()
+}
 
 // validateProjectName 校验项目名：合法的目录名，不含路径穿越字符
 func validateProjectName(name string) error {
@@ -53,6 +60,7 @@ var newCmd = &cobra.Command{
 
 		modulePath, _ := cmd.Flags().GetString("module")
 		templateDir, _ := cmd.Flags().GetString("template")
+		skipTidy, _ := cmd.Flags().GetBool("skip-tidy")
 
 		if modulePath == "" {
 			modulePath = projectName
@@ -67,10 +75,7 @@ var newCmd = &cobra.Command{
 			defer os.RemoveAll(tempDir)
 
 			fmt.Printf("Cloning template from %s to %s\n", templateDir, tempDir)
-			gitCmd := exec.Command("git", "clone", templateDir, tempDir)
-			gitCmd.Stdout = os.Stdout
-			gitCmd.Stderr = os.Stderr
-			if err := gitCmd.Run(); err != nil {
+			if err := runExternalCommand("", "git", "clone", templateDir, tempDir); err != nil {
 				return fmt.Errorf("cloning template repository: %w", err)
 			}
 			templateDir = tempDir
@@ -83,10 +88,7 @@ var newCmd = &cobra.Command{
 				defer os.RemoveAll(tempDir)
 
 				fmt.Printf("Local templates directory not found, cloning default template from https://github.com/rushairer/gouno-template to %s\n", tempDir)
-				gitCmd := exec.Command("git", "clone", "https://github.com/rushairer/gouno-template", tempDir)
-				gitCmd.Stdout = os.Stdout
-				gitCmd.Stderr = os.Stderr
-				if err := gitCmd.Run(); err != nil {
+				if err := runExternalCommand("", "git", "clone", "https://github.com/rushairer/gouno-template", tempDir); err != nil {
 					return fmt.Errorf("cloning template repository: %w", err)
 				}
 				templateDir = tempDir
@@ -124,13 +126,20 @@ var newCmd = &cobra.Command{
 			fmt.Printf("Template set '%s' saved to .gouno.yaml\n", templateSet)
 		}
 
+		if !skipTidy {
+			fmt.Printf("Tidying Go modules...\n")
+			if err := tidyProject(destDir); err != nil {
+				os.RemoveAll(destDir)
+				return err
+			}
+		}
+
 		fmt.Printf("Project '%s' created successfully in '%s'\n", projectName, destDir)
 		fmt.Printf("Next steps:\n")
 		fmt.Printf("  1. cd %s\n", projectName)
-		fmt.Printf("  2. go mod tidy\n")
-		fmt.Printf("  3. make dev\n")
-		fmt.Printf("  4. Open http://localhost:8080 in your browser\n")
-		fmt.Printf("  5. Start coding!\n")
+		fmt.Printf("  2. make dev\n")
+		fmt.Printf("  3. Open http://localhost:8080 in your browser\n")
+		fmt.Printf("  4. Start coding!\n")
 		return nil
 	},
 }
@@ -141,6 +150,7 @@ func init() {
 	newCmd.Flags().StringP("module", "m", "", "Go module path (e.g., github.com/your/project)")
 	newCmd.Flags().StringP("template", "t", "./templates", "Path to the template directory (default will clone from https://github.com/rushairer/gouno-template)")
 	newCmd.Flags().String("template-set", "", "Template set name for code generation (saved to .gouno.yaml)")
+	newCmd.Flags().Bool("skip-tidy", false, "Skip running go mod tidy after project creation")
 }
 
 // shouldSkipFile 判断是否跳过该文件/目录（检查路径中所有组件）
@@ -228,4 +238,11 @@ func copyTemplate(src, dest string, data TemplateData) error {
 		}
 		return nil
 	})
+}
+
+func tidyProject(destDir string) error {
+	if err := runExternalCommand(destDir, "go", "mod", "tidy"); err != nil {
+		return fmt.Errorf("running go mod tidy: %w", err)
+	}
+	return nil
 }
