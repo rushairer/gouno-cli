@@ -200,7 +200,7 @@ func copyTemplate(src, dest string, data TemplateData) error {
 		}
 
 		if info.IsDir() {
-			return os.MkdirAll(destPath, info.Mode())
+			return os.MkdirAll(destPath, 0o755)
 		}
 
 		srcFile, err := os.Open(path)
@@ -233,7 +233,7 @@ func copyTemplate(src, dest string, data TemplateData) error {
 			output = content
 		}
 
-		if err := os.WriteFile(destPath, []byte(output), info.Mode()); err != nil {
+		if err := os.WriteFile(destPath, []byte(output), 0o644); err != nil {
 			return err
 		}
 		return nil

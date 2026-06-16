@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- Use secure default file permissions (0755 for directories, 0644 for files) instead of copying source template permissions directly, preventing overly permissive access control on scaffolded projects.
+
 ## [1.0.1] - 2026-06-13
 
 ### Changed
