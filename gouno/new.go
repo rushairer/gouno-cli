@@ -48,6 +48,25 @@ func validateProjectName(name string) error {
 	return nil
 }
 
+// validateModulePath checks that a Go module path contains only valid characters.
+// This prevents YAML/template injection when the module path is rendered into
+// config files and source code.
+func validateModulePath(path string) error {
+	if path == "" {
+		return fmt.Errorf("module path cannot be empty")
+	}
+	if strings.ContainsAny(path, "\n\r\t") {
+		return fmt.Errorf("module path must not contain newlines or tabs")
+	}
+	// Go module paths: letters, digits, dots, slashes, hyphens, underscores
+	for _, c := range path {
+		if !unicode.IsLetter(c) && !unicode.IsDigit(c) && c != '/' && c != '.' && c != '-' && c != '_' {
+			return fmt.Errorf("module path contains invalid character %q", c)
+		}
+	}
+	return nil
+}
+
 var newCmd = &cobra.Command{
 	Use:   "new [project-name]",
 	Short: "Create a new web project from gouno-template",
@@ -64,6 +83,9 @@ var newCmd = &cobra.Command{
 
 		if modulePath == "" {
 			modulePath = projectName
+		}
+		if err := validateModulePath(modulePath); err != nil {
+			return err
 		}
 
 		// Handle template directory logic
@@ -118,6 +140,9 @@ var newCmd = &cobra.Command{
 		// 写入 .gouno.yaml 配置
 		templateSet, _ := cmd.Flags().GetString("template-set")
 		if templateSet != "" {
+			if err := validateTemplateName(templateSet); err != nil {
+				return fmt.Errorf("invalid template-set name: %w", err)
+			}
 			cfgContent := fmt.Sprintf("template-set: %s\n", templateSet)
 			cfgPath := filepath.Join(destDir, ".gouno.yaml")
 			if err := os.WriteFile(cfgPath, []byte(cfgContent), 0644); err != nil {
