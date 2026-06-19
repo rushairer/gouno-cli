@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -18,6 +19,21 @@ func templateSetDir() (string, error) {
 		return "", fmt.Errorf("failed to get home directory: %w", err)
 	}
 	return filepath.Join(homeDir, templateDirName, templatesDirName), nil
+}
+
+// validateTemplateName checks that a template name does not contain path
+// separators or traversal sequences that could escape the templates directory.
+func validateTemplateName(name string) error {
+	if name == "" {
+		return fmt.Errorf("template name must not be empty")
+	}
+	if strings.ContainsAny(name, "/\\") {
+		return fmt.Errorf("template name must not contain path separators")
+	}
+	if name == "." || name == ".." || strings.HasPrefix(name, "..") {
+		return fmt.Errorf("template name must not be a path traversal sequence")
+	}
+	return nil
 }
 
 var templateCmd = &cobra.Command{
@@ -66,6 +82,10 @@ var templateInstallCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 		source := args[1]
+
+		if err := validateTemplateName(name); err != nil {
+			return err
+		}
 
 		dir, err := templateSetDir()
 		if err != nil {
@@ -131,6 +151,9 @@ var templateRemoveCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
+		if err := validateTemplateName(name); err != nil {
+			return err
+		}
 		dir, err := templateSetDir()
 		if err != nil {
 			return err
