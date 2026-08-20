@@ -19,8 +19,8 @@ func TestVersionCmd(t *testing.T) {
 	if !strings.Contains(out, "gouno-cli ") {
 		t.Errorf("version output = %q; want prefix 'gouno-cli '", out)
 	}
-	if !strings.Contains(out, Version) {
-		t.Errorf("version output = %q; want contains version %q", out, Version)
+	if !strings.Contains(out, getVersion()) {
+		t.Errorf("version output = %q; want contains version %q", out, getVersion())
 	}
 }
 
