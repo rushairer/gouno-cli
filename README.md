@@ -42,7 +42,6 @@ make dev
 |------|-------|---------|-------------|
 | `--module` | `-m` | project name | Go module path (e.g., `github.com/you/project`) |
 | `--template` | `-t` | `./templates` | Local path or git URL to template directory |
-| `--template-set` | | | Template set name (saved to `.gouno.yaml` for code generation) |
 | `--skip-tidy` | | `false` | Skip running `go mod tidy` after project creation |
 
 **Examples:**
@@ -51,9 +50,6 @@ make dev
 # Use default template
 gouno-cli new my-api -m github.com/me/my-api
 
-# Use a specific template set
-gouno-cli new order-service --template-set gorm -m github.com/me/order-service
-
 # Use a custom template repository
 gouno-cli new my-app -t https://github.com/myorg/custom-template -m github.com/me/my-app
 
@@ -61,23 +57,17 @@ gouno-cli new my-app -t https://github.com/myorg/custom-template -m github.com/m
 gouno-cli new my-app -t /path/to/local/template -m github.com/me/my-app
 ```
 
-### Manage Template Sets
+### About Project Templates
 
-```bash
-# List installed template sets
-gouno-cli template list
+`gouno-cli new` uses a project template — a full Go project skeleton repository
+(e.g. [gouno-template](https://github.com/rushairer/gouno-template)). You can
+point it to any git URL or local directory with `--template`; there is no local
+template registry to maintain.
 
-# Install a template set from git
-gouno-cli template install gorm https://github.com/myorg/gouno-template-gorm
-
-# Install from local path
-gouno-cli template install my-local /path/to/template
-
-# Remove a template set
-gouno-cli template remove gorm
-```
-
-Template sets are stored in `~/.gouno/templates/`.
+> Note: don't confuse a project template with a *template set*. A template set
+> is the collection of `.tmpl` scaffold files used by `gouno gen` (from the
+> [gouno](https://github.com/rushairer/gouno) library) to generate code — it is
+> a different concept and not part of gouno-cli.
 
 ### Version
 
@@ -99,8 +89,8 @@ gouno-cli --version
 
 | Repository | Description |
 |------------|-------------|
-| [gouno](https://github.com/rushairer/gouno) | Core library |
-| [gouno-template](https://github.com/rushairer/gouno-template) | Default template set |
+| [gouno](https://github.com/rushairer/gouno) | Core library (includes code generation with built-in `.tmpl` templates) |
+| [gouno-template](https://github.com/rushairer/gouno-template) | Default project template |
 | [gouno-doc](https://github.com/rushairer/gouno-doc) | Documentation |
 
 ## License

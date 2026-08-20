@@ -39,9 +39,6 @@ func validateProjectName(name string) error {
 	if strings.Contains(name, "..") {
 		return fmt.Errorf("project name cannot contain '..': %s", name)
 	}
-	if !unicode.IsLetter(rune(name[0])) && name[0] != '_' {
-		return fmt.Errorf("project name must start with a letter or underscore: %s", name)
-	}
 	if !projectNameRegex.MatchString(name) {
 		return fmt.Errorf("project name must be a valid identifier (letters, digits, underscores, hyphens): %s", name)
 	}
@@ -62,6 +59,12 @@ func validateModulePath(path string) error {
 	for _, c := range path {
 		if !unicode.IsLetter(c) && !unicode.IsDigit(c) && c != '/' && c != '.' && c != '-' && c != '_' {
 			return fmt.Errorf("module path contains invalid character %q", c)
+		}
+	}
+	// 每个路径段不能为空、"." 或 "..",否则 go mod tidy 会失败
+	for _, elem := range strings.Split(path, "/") {
+		if elem == "" || elem == "." || elem == ".." {
+			return fmt.Errorf("module path contains invalid path element %q", elem)
 		}
 	}
 	return nil
@@ -132,23 +135,12 @@ var newCmd = &cobra.Command{
 		fmt.Printf("Creating new project '%s' with module path '%s' from template '%s'\n", projectName, modulePath, templateDir)
 
 		destDir := filepath.Join(".", projectName)
+		if _, err := os.Stat(destDir); err == nil {
+			return fmt.Errorf("directory %q already exists, refusing to overwrite", destDir)
+		}
 		if err := copyTemplate(templateDir, destDir, data); err != nil {
 			os.RemoveAll(destDir) // 清理已创建的部分文件
 			return fmt.Errorf("creating project: %w", err)
-		}
-
-		// 写入 .gouno.yaml 配置
-		templateSet, _ := cmd.Flags().GetString("template-set")
-		if templateSet != "" {
-			if err := validateTemplateName(templateSet); err != nil {
-				return fmt.Errorf("invalid template-set name: %w", err)
-			}
-			cfgContent := fmt.Sprintf("template-set: %s\n", templateSet)
-			cfgPath := filepath.Join(destDir, ".gouno.yaml")
-			if err := os.WriteFile(cfgPath, []byte(cfgContent), 0644); err != nil {
-				return fmt.Errorf("writing .gouno.yaml: %w", err)
-			}
-			fmt.Printf("Template set '%s' saved to .gouno.yaml\n", templateSet)
 		}
 
 		if !skipTidy {
@@ -174,7 +166,6 @@ func init() {
 
 	newCmd.Flags().StringP("module", "m", "", "Go module path (e.g., github.com/your/project)")
 	newCmd.Flags().StringP("template", "t", "./templates", "Path to the template directory (default will clone from https://github.com/rushairer/gouno-template)")
-	newCmd.Flags().String("template-set", "", "Template set name for code generation (saved to .gouno.yaml)")
 	newCmd.Flags().Bool("skip-tidy", false, "Skip running go mod tidy after project creation")
 }
 
@@ -190,9 +181,6 @@ func shouldSkipFile(relPath string) bool {
 	parts := strings.Split(relPath, string(filepath.Separator))
 	for _, part := range parts {
 		if skipNames[part] {
-			return true
-		}
-		if strings.HasPrefix(part, ".git") {
 			return true
 		}
 	}
@@ -232,11 +220,13 @@ func copyTemplate(src, dest string, data TemplateData) error {
 		if err != nil {
 			return err
 		}
-		defer srcFile.Close()
-
 		contentBytes, err := io.ReadAll(srcFile)
+		closeErr := srcFile.Close()
 		if err != nil {
 			return err
+		}
+		if closeErr != nil {
+			return closeErr
 		}
 		content := string(contentBytes)
 
@@ -258,7 +248,9 @@ func copyTemplate(src, dest string, data TemplateData) error {
 			output = content
 		}
 
-		if err := os.WriteFile(destPath, []byte(output), 0o644); err != nil {
+		// 保留源文件可执行位（如模板中的 run.sh），但去掉 group/other 写位，
+		// 避免复制出 0777 这类过度宽松的权限。
+		if err := os.WriteFile(destPath, []byte(output), info.Mode().Perm()&0o755); err != nil {
 			return err
 		}
 		return nil

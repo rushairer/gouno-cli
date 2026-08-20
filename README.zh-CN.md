@@ -42,7 +42,6 @@ make dev
 |------|------|--------|------|
 | `--module` | `-m` | 项目名称 | Go module 路径（如 `github.com/you/project`） |
 | `--template` | `-t` | `./templates` | 本地路径或 Git URL 指向模板目录 |
-| `--template-set` | | | 模板集名称（保存到 `.gouno.yaml` 供代码生成使用） |
 | `--skip-tidy` | | `false` | 创建项目后跳过 `go mod tidy` |
 
 **示例：**
@@ -51,9 +50,6 @@ make dev
 # 使用默认模板
 gouno-cli new my-api -m github.com/me/my-api
 
-# 使用指定模板集
-gouno-cli new order-service --template-set gorm -m github.com/me/order-service
-
 # 使用自定义模板仓库
 gouno-cli new my-app -t https://github.com/myorg/custom-template -m github.com/me/my-app
 
@@ -61,23 +57,15 @@ gouno-cli new my-app -t https://github.com/myorg/custom-template -m github.com/m
 gouno-cli new my-app -t /path/to/local/template -m github.com/me/my-app
 ```
 
-### 管理模板集
+### 关于项目模板
 
-```bash
-# 列出已安装的模板集
-gouno-cli template list
+`gouno-cli new` 使用**项目模板** —— 完整的 Go 项目骨架仓库
+（如 [gouno-template](https://github.com/rushairer/gouno-template)）。
+可通过 `--template` 指定任意 Git URL 或本地目录，无需维护本地模板库。
 
-# 从 Git 安装模板集
-gouno-cli template install gorm https://github.com/myorg/gouno-template-gorm
-
-# 从本地路径安装
-gouno-cli template install my-local /path/to/template
-
-# 删除模板集
-gouno-cli template remove gorm
-```
-
-模板集存储在 `~/.gouno/templates/` 目录下。
+> 注意：请勿将项目模板与**模板集（template set）**混淆。模板集是
+> [gouno](https://github.com/rushairer/gouno) 库中 `gouno gen` 生成代码所用的
+> `.tmpl` 脚手架文件集合，属于另一个概念，不属于 gouno-cli。
 
 ### 查看版本
 
@@ -99,8 +87,8 @@ gouno-cli --version
 
 | 仓库 | 说明 |
 |------|------|
-| [gouno](https://github.com/rushairer/gouno) | 核心库 |
-| [gouno-template](https://github.com/rushairer/gouno-template) | 默认模板集 |
+| [gouno](https://github.com/rushairer/gouno) | 核心库（含内置 `.tmpl` 模板的代码生成） |
+| [gouno-template](https://github.com/rushairer/gouno-template) | 默认项目模板 |
 | [gouno-doc](https://github.com/rushairer/gouno-doc) | 文档 |
 
 ## 许可证

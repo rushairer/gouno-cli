@@ -5,11 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.1.0] - 2026-08-20
+
+### Breaking
+
+- Remove the `template install/list/remove` commands. `gouno-cli new` uses project templates (full skeleton repositories like gouno-template) directly via `--template <git-url-or-path>`; there is no local template registry to maintain.
+- Remove the `--template-set` flag from `new`; no longer writes `.gouno.yaml`.
+
+### Changed
+
+- Clarify the distinction between a project template (used by `new`) and a template set (`.tmpl` scaffold files for code generation in the gouno library).
+- Refuse to overwrite an existing project directory.
 
 ### Fixed
 
-- Use secure default file permissions (0755 for directories, 0644 for files) instead of copying source template permissions directly, preventing overly permissive access control on scaffolded projects.
+- Stop wrongly skipping `.gitignore` and `.github` files caused by the `.git` prefix check (now matches the exact name).
+- Validate each path element of the module path, rejecting empty, `.` and `..` segments.
+- Keep executable bits on generated files while stripping group/other write permissions, preventing overly permissive modes (e.g. 0777) on scaffolded projects.
 
 ## [1.0.1] - 2026-06-13
 

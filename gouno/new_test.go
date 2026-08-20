@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -56,8 +57,10 @@ func TestShouldSkipFile(t *testing.T) {
 		expect bool
 	}{
 		{".git", true},
-		{".gitignore", true},
-		{".github/workflows/ci.yml", true},
+		{".git/config", true},
+		{".gitignore", false},
+		{".gitattributes", false},
+		{".github/workflows/ci.yml", false},
 		{".idea", true},
 		{".DS_Store", true},
 		{"bin/gouno", true},
@@ -65,7 +68,7 @@ func TestShouldSkipFile(t *testing.T) {
 		{"src/main.go", false},
 		{"go.mod", false},
 		{"README.md", false},
-		{"internal/domain/.gitkeep", true},
+		{"internal/domain/.gitkeep", false},
 		{"config/development.yaml", false},
 	}
 
@@ -248,4 +251,239 @@ func TestTidyProjectWrapsError(t *testing.T) {
 
 func contains(s, substr string) bool {
 	return strings.Contains(s, substr)
+}
+
+func TestValidateModulePath(t *testing.T) {
+	validPaths := []string{
+		"github.com/foo/bar",
+		"myproject",
+		"example.com/a-b/c_d",
+		"git.example.com/org/module.v2",
+	}
+
+	for _, p := range validPaths {
+		t.Run("valid/"+p, func(t *testing.T) {
+			if err := validateModulePath(p); err != nil {
+				t.Errorf("validateModulePath(%q) = %v; want nil", p, err)
+			}
+		})
+	}
+
+	invalidPaths := []struct {
+		path string
+		desc string
+	}{
+		{"", "empty"},
+		{"a\nb", "newline"},
+		{"a\tb", "tab"},
+		{"foo bar", "space"},
+		{"foo%bar", "percent"},
+		{"foo/../bar", "traversal element"},
+		{"foo/./bar", "dot element"},
+		{"foo//bar", "empty element"},
+		{"../foo", "leading traversal"},
+		{"foo/..", "trailing traversal"},
+	}
+
+	for _, tt := range invalidPaths {
+		t.Run("invalid/"+tt.desc, func(t *testing.T) {
+			if err := validateModulePath(tt.path); err == nil {
+				t.Errorf("validateModulePath(%q) = nil; want error", tt.path)
+			}
+		})
+	}
+}
+
+func TestCopyTemplatePreservesGitignore(t *testing.T) {
+	srcDir := t.TempDir()
+	destDir := t.TempDir()
+
+	if err := os.WriteFile(filepath.Join(srcDir, ".gitignore"), []byte("bin/\n*.exe\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	data := TemplateData{ModulePath: "test", ProjectName: "test"}
+	if err := copyTemplate(srcDir, destDir, data); err != nil {
+		t.Fatalf("copyTemplate() error: %v", err)
+	}
+
+	content, err := os.ReadFile(filepath.Join(destDir, ".gitignore"))
+	if err != nil {
+		t.Fatalf("read .gitignore: %v", err)
+	}
+	if !strings.Contains(string(content), "bin/") {
+		t.Errorf(".gitignore content = %q; want original content preserved", string(content))
+	}
+}
+
+func TestCopyTemplatePreservesFileMode(t *testing.T) {
+	srcDir := t.TempDir()
+	destDir := t.TempDir()
+
+	script := filepath.Join(srcDir, "run.sh")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\necho hi\n"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	data := TemplateData{ModulePath: "test", ProjectName: "test"}
+	if err := copyTemplate(srcDir, destDir, data); err != nil {
+		t.Fatalf("copyTemplate() error: %v", err)
+	}
+
+	info, err := os.Stat(filepath.Join(destDir, "run.sh"))
+	if err != nil {
+		t.Fatalf("stat run.sh: %v", err)
+	}
+	if info.Mode().Perm() != 0o755 {
+		t.Errorf("run.sh mode = %v; want 0755", info.Mode().Perm())
+	}
+}
+
+// chdir 切换工作目录并在测试结束时恢复
+func chdir(t *testing.T, dir string) {
+	t.Helper()
+	old, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(old) })
+}
+
+// setNewCmdFlags 为 newCmd 设置全部相关 flags,避免包级 flag 值在测试间残留
+func setNewCmdFlags(t *testing.T, templateDir, module string, skipTidy bool) {
+	t.Helper()
+	f := newCmd.Flags()
+	for flag, value := range map[string]string{
+		"template":  templateDir,
+		"module":    module,
+		"skip-tidy": strconv.FormatBool(skipTidy),
+	} {
+		if err := f.Set(flag, value); err != nil {
+			t.Fatalf("set flag %q: %v", flag, err)
+		}
+	}
+}
+
+func TestNewCmdCreatesProject(t *testing.T) {
+	chdir(t, t.TempDir())
+
+	srcDir := t.TempDir()
+	os.WriteFile(filepath.Join(srcDir, "go.mod"), []byte("module {{.ModulePath}}\n"), 0644)
+	os.WriteFile(filepath.Join(srcDir, "README.md"), []byte("# {{.ProjectName}}\n"), 0644)
+	os.WriteFile(filepath.Join(srcDir, ".gitignore"), []byte("bin/\n"), 0644)
+
+	setNewCmdFlags(t, srcDir, "github.com/me/app", true)
+
+	if err := newCmd.RunE(newCmd, []string{"myapp"}); err != nil {
+		t.Fatalf("newCmd.RunE() error: %v", err)
+	}
+
+	gomod, err := os.ReadFile(filepath.Join("myapp", "go.mod"))
+	if err != nil {
+		t.Fatalf("read go.mod: %v", err)
+	}
+	if string(gomod) != "module github.com/me/app\n" {
+		t.Errorf("go.mod = %q; want rendered module path", string(gomod))
+	}
+
+	readme, err := os.ReadFile(filepath.Join("myapp", "README.md"))
+	if err != nil {
+		t.Fatalf("read README.md: %v", err)
+	}
+	if !strings.Contains(string(readme), "# myapp") {
+		t.Errorf("README.md = %q; want project name rendered", string(readme))
+	}
+
+	if _, err := os.Stat(filepath.Join("myapp", ".gitignore")); err != nil {
+		t.Errorf(".gitignore should be copied to new project: %v", err)
+	}
+}
+
+func TestNewCmdRejectsExistingDir(t *testing.T) {
+	chdir(t, t.TempDir())
+
+	if err := os.MkdirAll("myapp", 0755); err != nil {
+		t.Fatal(err)
+	}
+	os.WriteFile(filepath.Join("myapp", "keep.txt"), []byte("user data"), 0644)
+
+	srcDir := t.TempDir()
+	os.WriteFile(filepath.Join(srcDir, "go.mod"), []byte("module {{.ModulePath}}\n"), 0644)
+	setNewCmdFlags(t, srcDir, "test", true)
+
+	err := newCmd.RunE(newCmd, []string{"myapp"})
+	if err == nil {
+		t.Fatal("expected error for existing directory, got nil")
+	}
+	if !strings.Contains(err.Error(), "already exists") {
+		t.Errorf("error = %v; want 'already exists'", err)
+	}
+
+	// 已存在的用户数据必须完好
+	content, err := os.ReadFile(filepath.Join("myapp", "keep.txt"))
+	if err != nil {
+		t.Fatalf("user data destroyed: %v", err)
+	}
+	if string(content) != "user data" {
+		t.Errorf("keep.txt = %q; want unchanged", string(content))
+	}
+}
+
+func TestNewCmdRejectsInvalidModulePath(t *testing.T) {
+	chdir(t, t.TempDir())
+
+	srcDir := t.TempDir()
+	os.WriteFile(filepath.Join(srcDir, "go.mod"), []byte("module {{.ModulePath}}\n"), 0644)
+	setNewCmdFlags(t, srcDir, "foo/../bar", true)
+
+	err := newCmd.RunE(newCmd, []string{"myapp"})
+	if err == nil {
+		t.Fatal("expected error for invalid module path, got nil")
+	}
+	if _, err := os.Stat("myapp"); !os.IsNotExist(err) {
+		t.Error("project directory should not be created for invalid module path")
+	}
+}
+
+func TestNewCmdClonesRemoteTemplate(t *testing.T) {
+	chdir(t, t.TempDir())
+
+	orig := runExternalCommand
+	defer func() { runExternalCommand = orig }()
+
+	var calls []string
+	runExternalCommand = func(dir, name string, args ...string) error {
+		calls = append(calls, name+" "+strings.Join(args, " "))
+		if name == "git" && len(args) >= 2 && args[0] == "clone" {
+			// 模拟 clone 产生模板文件
+			dest := args[len(args)-1]
+			if err := os.WriteFile(filepath.Join(dest, "go.mod"), []byte("module {{.ModulePath}}\n"), 0644); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	setNewCmdFlags(t, "https://github.com/example/template.git", "github.com/me/app", true)
+	if err := newCmd.RunE(newCmd, []string{"myapp"}); err != nil {
+		t.Fatalf("newCmd.RunE() error: %v", err)
+	}
+
+	if len(calls) != 1 {
+		t.Fatalf("expected 1 git clone call, got %v", calls)
+	}
+	if !strings.HasPrefix(calls[0], "git clone https://github.com/example/template.git") {
+		t.Errorf("clone call = %q; want git clone with source URL", calls[0])
+	}
+
+	gomod, err := os.ReadFile(filepath.Join("myapp", "go.mod"))
+	if err != nil {
+		t.Fatalf("read go.mod: %v", err)
+	}
+	if string(gomod) != "module github.com/me/app\n" {
+		t.Errorf("go.mod = %q; want rendered from cloned template", string(gomod))
+	}
 }
