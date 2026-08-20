@@ -177,10 +177,11 @@ func shouldSkipFile(relPath string) bool {
 		".DS_Store": true,
 		"bin":       true,
 		"templates": true,
+		".env":      true,
 	}
 	parts := strings.Split(relPath, string(filepath.Separator))
 	for _, part := range parts {
-		if skipNames[part] {
+		if skipNames[part] || strings.HasSuffix(part, ".local.yaml") || strings.HasPrefix(part, ".env.") {
 			return true
 		}
 	}

@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.1.1] - 2026-08-20
+
+### Fixed
+
+- Skip private environment and local config files (`*.local.yaml`, `.env`, `.env.*`) when copying project template skeleton (`gouno/new.go`).
+- Fall back to reading module version from runtime build info (`debug.ReadBuildInfo`) when `Version` is not injected via `-ldflags` (`gouno/root.go`).
+
 ## [1.1.0] - 2026-08-20
 
 ### Breaking
