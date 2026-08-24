@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- `gouno-cli new` now follows the template repository's default branch by default (including the default `gouno-template`); use `--template-ref` to pin an immutable branch or tag for reproducible builds.
+
 ## [1.2.0] - 2026-08-24
 
 ### Added

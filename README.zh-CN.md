@@ -30,7 +30,7 @@ go build -o gouno-cli .
 gouno-cli new my-service -m github.com/you/my-service
 ```
 
-此命令会克隆默认的 [gouno-template](https://github.com/rushairer/gouno-template)，渲染所有模板变量，并创建一个可直接运行的项目。
+此命令会克隆默认的 [gouno-template](https://github.com/rushairer/gouno-template)（默认跟随其最新默认分支），渲染所有模板变量，并创建一个可直接运行的项目。如需固化模板版本以保证可复现构建，可通过 `--template-ref` 指定（见下文）。
 
 ```bash
 cd my-service
@@ -44,16 +44,20 @@ make dev
 |------|------|--------|------|
 | `--module` | `-m` | 项目名称 | Go module 路径（如 `github.com/you/project`） |
 | `--template` | `-t` | `./templates` | 本地路径或 Git URL 指向模板目录 |
+| `--template-ref` | | 空 | 远程模板的不可变分支或标签；为空时跟随模板默认分支 |
 | `--skip-tidy` | | `false` | 创建项目后跳过 `go mod tidy` |
 
 **示例：**
 
 ```bash
-# 使用默认模板
+# 使用默认模板（跟随最新默认分支）
 gouno-cli new my-api -m github.com/me/my-api
 
-# 使用自定义模板仓库
+# 使用自定义模板仓库（跟随最新默认分支）
 gouno-cli new my-app -t https://github.com/myorg/custom-template -m github.com/me/my-app
+
+# 固化模板版本以保证可复现构建
+gouno-cli new my-app -t https://github.com/myorg/custom-template --template-ref v1.0.0 -m github.com/me/my-app
 
 # 使用本地模板目录
 gouno-cli new my-app -t /path/to/local/template -m github.com/me/my-app
@@ -64,6 +68,9 @@ gouno-cli new my-app -t /path/to/local/template -m github.com/me/my-app
 `gouno-cli new` 使用**项目模板** —— 完整的 Go 项目骨架仓库
 （如 [gouno-template](https://github.com/rushairer/gouno-template)）。
 可通过 `--template` 指定任意 Git URL 或本地目录，无需维护本地模板库。
+默认情况下（默认模板和自定义远程模板）都会克隆仓库的最新默认分支；
+如需可复现的远程构建，可用 `--template-ref` 固定到某个不可变的分支或标签
+（如 `--template-ref v1.2.0`）。
 
 > 注意：请勿将项目模板与**模板集（template set）**混淆。模板集是
 > [gouno](https://github.com/rushairer/gouno) 库中 `gouno gen` 生成代码所用的

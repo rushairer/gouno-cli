@@ -30,7 +30,7 @@ go build -o gouno-cli .
 gouno-cli new my-service -m github.com/you/my-service
 ```
 
-This clones the default [gouno-template](https://github.com/rushairer/gouno-template) at immutable tag `v1.2.0`, renders all template variables, and creates a ready-to-run project.
+This clones the default [gouno-template](https://github.com/rushairer/gouno-template) from its latest default branch, renders all template variables, and creates a ready-to-run project. To pin a specific template version for reproducible builds, pass `--template-ref` (see below).
 
 ```bash
 cd my-service
@@ -44,16 +44,19 @@ make dev
 |------|-------|---------|-------------|
 | `--module` | `-m` | project name | Go module path (e.g., `github.com/you/project`) |
 | `--template` | `-t` | `./templates` | Local path or git URL to template directory |
-| `--template-ref` | | empty | Immutable branch, tag, or commit ref for a remote template |
+| `--template-ref` | | empty | Immutable branch or tag for a remote template; empty follows the template's default branch |
 | `--skip-tidy` | | `false` | Skip running `go mod tidy` after project creation |
 
 **Examples:**
 
 ```bash
-# Use default template
+# Use the default template (latest default branch)
 gouno-cli new my-api -m github.com/me/my-api
 
-# Use a custom template repository
+# Use a custom template repository (latest default branch)
+gouno-cli new my-app -t https://github.com/myorg/custom-template -m github.com/me/my-app
+
+# Pin an immutable template version for reproducible builds
 gouno-cli new my-app -t https://github.com/myorg/custom-template --template-ref v1.0.0 -m github.com/me/my-app
 
 # Use a local template directory
@@ -67,7 +70,7 @@ gouno-cli new my-app -t /path/to/local/template -m github.com/me/my-app
 point it to any git URL or local directory with `--template`; there is no local
 template registry to maintain.
 
-For reproducible remote builds, provide an immutable `--template-ref`. Custom remote templates without it retain their repository default-branch behavior.
+By default, `gouno-cli new` clones the template repository's latest default branch — this applies to both the default template and custom remote templates. For reproducible remote builds, pin an immutable branch or tag with `--template-ref` (e.g. `--template-ref v1.2.0`).
 
 > Note: don't confuse a project template with a *template set*. A template set
 > is the collection of `.tmpl` scaffold files used by `gouno gen` (from the

@@ -21,10 +21,7 @@ type TemplateData struct {
 
 var projectNameRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_-]*$`)
 
-const (
-	defaultTemplateRepo = "https://github.com/rushairer/gouno-template"
-	defaultTemplateRef  = "v1.2.0"
-)
+const defaultTemplateRepo = "https://github.com/rushairer/gouno-template"
 
 var runExternalCommand = func(dir, name string, args ...string) error {
 	externalCmd := exec.Command(name, args...)
@@ -32,6 +29,18 @@ var runExternalCommand = func(dir, name string, args ...string) error {
 	externalCmd.Stdout = os.Stdout
 	externalCmd.Stderr = os.Stderr
 	return externalCmd.Run()
+}
+
+// cloneTemplate clones a template repository into dest. An empty ref follows
+// the repository's default branch; otherwise the given immutable branch or tag
+// is checked out with a shallow clone.
+func cloneTemplate(repo, ref, dest string) error {
+	cloneArgs := []string{"clone"}
+	if ref != "" {
+		cloneArgs = append(cloneArgs, "--branch", ref)
+	}
+	cloneArgs = append(cloneArgs, "--depth", "1", repo, dest)
+	return runExternalCommand("", "git", cloneArgs...)
 }
 
 // validateProjectName 校验项目名：合法的目录名，不含路径穿越字符
@@ -107,12 +116,7 @@ var newCmd = &cobra.Command{
 			defer func() { _ = os.RemoveAll(tempDir) }()
 
 			fmt.Printf("Cloning template from %s to %s\n", templateDir, tempDir)
-			cloneArgs := []string{"clone"}
-			if templateRef != "" {
-				cloneArgs = append(cloneArgs, "--branch", templateRef, "--depth", "1")
-			}
-			cloneArgs = append(cloneArgs, templateDir, tempDir)
-			if err := runExternalCommand("", "git", cloneArgs...); err != nil {
+			if err := cloneTemplate(templateDir, templateRef, tempDir); err != nil {
 				return fmt.Errorf("cloning template repository: %w", err)
 			}
 			templateDir = tempDir
@@ -124,11 +128,8 @@ var newCmd = &cobra.Command{
 				}
 				defer func() { _ = os.RemoveAll(tempDir) }()
 
-				if templateRef == "" {
-					templateRef = defaultTemplateRef
-				}
-				fmt.Printf("Local templates directory not found, cloning default template %s at %s to %s\n", defaultTemplateRepo, templateRef, tempDir)
-				if err := runExternalCommand("", "git", "clone", "--branch", templateRef, "--depth", "1", defaultTemplateRepo, tempDir); err != nil {
+				fmt.Printf("Local templates directory not found, cloning default template %s to %s\n", defaultTemplateRepo, tempDir)
+				if err := cloneTemplate(defaultTemplateRepo, templateRef, tempDir); err != nil {
 					return fmt.Errorf("cloning template repository: %w", err)
 				}
 				templateDir = tempDir
@@ -180,8 +181,8 @@ func init() {
 	rootCmd.AddCommand(newCmd)
 
 	newCmd.Flags().StringP("module", "m", "", "Go module path (e.g., github.com/your/project)")
-	newCmd.Flags().StringP("template", "t", "./templates", "Path to the template directory (default will clone from https://github.com/rushairer/gouno-template)")
-	newCmd.Flags().String("template-ref", "", "Immutable branch, tag, or commit ref for a remote template (the default template uses v1.2.0)")
+	newCmd.Flags().StringP("template", "t", "./templates", fmt.Sprintf("Path to the template directory (default will clone from %s)", defaultTemplateRepo))
+	newCmd.Flags().String("template-ref", "", "Immutable branch or tag for a remote template (default: follows the template's default branch)")
 	newCmd.Flags().Bool("skip-tidy", false, "Skip running go mod tidy after project creation")
 }
 

@@ -510,8 +510,8 @@ func TestNewCmdClonesRemoteTemplate(t *testing.T) {
 	if len(calls) != 1 {
 		t.Fatalf("expected 1 git clone call, got %v", calls)
 	}
-	if !strings.HasPrefix(calls[0], "git clone https://github.com/example/template.git") {
-		t.Errorf("clone call = %q; want git clone with source URL", calls[0])
+	if !strings.HasPrefix(calls[0], "git clone --depth 1 https://github.com/example/template.git") {
+		t.Errorf("clone call = %q; want git clone --depth 1 with source URL", calls[0])
 	}
 
 	gomod, err := os.ReadFile(filepath.Join("myapp", "go.mod"))
@@ -523,7 +523,32 @@ func TestNewCmdClonesRemoteTemplate(t *testing.T) {
 	}
 }
 
-func TestNewCmdPinsDefaultTemplateTag(t *testing.T) {
+func TestNewCmdDefaultTemplateFollowsDefaultBranch(t *testing.T) {
+	chdir(t, t.TempDir())
+	orig := runExternalCommand
+	defer func() { runExternalCommand = orig }()
+	var call string
+	runExternalCommand = func(_ string, name string, args ...string) error {
+		call = name + " " + strings.Join(args, " ")
+		if name == "git" && args[0] == "clone" {
+			return os.WriteFile(filepath.Join(args[len(args)-1], "go.mod"), []byte("module {{.ModulePath}}\n"), 0644)
+		}
+		return nil
+	}
+	setNewCmdFlags(t, "./templates", "github.com/me/app", true)
+	if err := newCmd.RunE(newCmd, []string{"myapp"}); err != nil {
+		t.Fatalf("newCmd.RunE() error: %v", err)
+	}
+	want := "git clone --depth 1 https://github.com/rushairer/gouno-template"
+	if !strings.HasPrefix(call, want) {
+		t.Fatalf("clone call = %q; want prefix %q (default should follow the template's default branch)", call, want)
+	}
+	if strings.Contains(call, "--branch") {
+		t.Fatalf("clone call = %q; default template should not pin a branch", call)
+	}
+}
+
+func TestNewCmdTemplateRefPinsBranch(t *testing.T) {
 	chdir(t, t.TempDir())
 	orig := runExternalCommand
 	defer func() { runExternalCommand = orig }()
@@ -536,6 +561,9 @@ func TestNewCmdPinsDefaultTemplateTag(t *testing.T) {
 		return nil
 	}
 	setNewCmdFlags(t, "./templates", "github.com/me/pinned", true)
+	if err := newCmd.Flags().Set("template-ref", "v1.2.0"); err != nil {
+		t.Fatal(err)
+	}
 	if err := newCmd.RunE(newCmd, []string{"pinned"}); err != nil {
 		t.Fatalf("newCmd.RunE() error: %v", err)
 	}
