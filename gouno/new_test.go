@@ -128,13 +128,27 @@ func main() {
 
 This is a project.`
 
-	os.WriteFile(filepath.Join(srcDir, "go.mod"), []byte(goModContent), 0644)
-	os.WriteFile(filepath.Join(srcDir, "main.go"), []byte(mainContent), 0644)
-	os.WriteFile(filepath.Join(srcDir, "README.md"), []byte(readmeContent), 0644)
-	os.MkdirAll(filepath.Join(srcDir, ".git"), 0755)
-	os.WriteFile(filepath.Join(srcDir, ".git", "config"), []byte("git config"), 0644)
-	os.MkdirAll(filepath.Join(srcDir, "bin"), 0755)
-	os.WriteFile(filepath.Join(srcDir, "bin", "app"), []byte("binary"), 0755)
+	if err := os.WriteFile(filepath.Join(srcDir, "go.mod"), []byte(goModContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "main.go"), []byte(mainContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "README.md"), []byte(readmeContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(srcDir, ".git"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, ".git", "config"), []byte("git config"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(srcDir, "bin"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "bin", "app"), []byte("binary"), 0755); err != nil {
+		t.Fatal(err)
+	}
 
 	data := TemplateData{
 		ModulePath:  "github.com/test/myapp",
@@ -190,12 +204,16 @@ func TestCopyTemplateCleanupOnError(t *testing.T) {
 	destProject := filepath.Join(destDir, "myproject")
 
 	// 创建一个会渲染成功的文件
-	os.WriteFile(filepath.Join(srcDir, "go.mod"), []byte("module {{.ModulePath}}"), 0644)
+	if err := os.WriteFile(filepath.Join(srcDir, "go.mod"), []byte("module {{.ModulePath}}"), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	// 创建一个会导致 Execute 失败的模板（引用不存在的字段）
 	// template.Parse 会成功，但 Execute 会失败
 	badContent := `{{.NonExistentField}}`
-	os.WriteFile(filepath.Join(srcDir, "bad.go"), []byte(badContent), 0644)
+	if err := os.WriteFile(filepath.Join(srcDir, "bad.go"), []byte(badContent), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	data := TemplateData{
 		ModulePath:  "test",
@@ -361,9 +379,10 @@ func setNewCmdFlags(t *testing.T, templateDir, module string, skipTidy bool) {
 	t.Helper()
 	f := newCmd.Flags()
 	for flag, value := range map[string]string{
-		"template":  templateDir,
-		"module":    module,
-		"skip-tidy": strconv.FormatBool(skipTidy),
+		"template":     templateDir,
+		"module":       module,
+		"skip-tidy":    strconv.FormatBool(skipTidy),
+		"template-ref": "",
 	} {
 		if err := f.Set(flag, value); err != nil {
 			t.Fatalf("set flag %q: %v", flag, err)
@@ -375,9 +394,15 @@ func TestNewCmdCreatesProject(t *testing.T) {
 	chdir(t, t.TempDir())
 
 	srcDir := t.TempDir()
-	os.WriteFile(filepath.Join(srcDir, "go.mod"), []byte("module {{.ModulePath}}\n"), 0644)
-	os.WriteFile(filepath.Join(srcDir, "README.md"), []byte("# {{.ProjectName}}\n"), 0644)
-	os.WriteFile(filepath.Join(srcDir, ".gitignore"), []byte("bin/\n"), 0644)
+	if err := os.WriteFile(filepath.Join(srcDir, "go.mod"), []byte("module {{.ModulePath}}\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "README.md"), []byte("# {{.ProjectName}}\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, ".gitignore"), []byte("bin/\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	setNewCmdFlags(t, srcDir, "github.com/me/app", true)
 
@@ -412,10 +437,14 @@ func TestNewCmdRejectsExistingDir(t *testing.T) {
 	if err := os.MkdirAll("myapp", 0755); err != nil {
 		t.Fatal(err)
 	}
-	os.WriteFile(filepath.Join("myapp", "keep.txt"), []byte("user data"), 0644)
+	if err := os.WriteFile(filepath.Join("myapp", "keep.txt"), []byte("user data"), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	srcDir := t.TempDir()
-	os.WriteFile(filepath.Join(srcDir, "go.mod"), []byte("module {{.ModulePath}}\n"), 0644)
+	if err := os.WriteFile(filepath.Join(srcDir, "go.mod"), []byte("module {{.ModulePath}}\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
 	setNewCmdFlags(t, srcDir, "test", true)
 
 	err := newCmd.RunE(newCmd, []string{"myapp"})
@@ -440,7 +469,9 @@ func TestNewCmdRejectsInvalidModulePath(t *testing.T) {
 	chdir(t, t.TempDir())
 
 	srcDir := t.TempDir()
-	os.WriteFile(filepath.Join(srcDir, "go.mod"), []byte("module {{.ModulePath}}\n"), 0644)
+	if err := os.WriteFile(filepath.Join(srcDir, "go.mod"), []byte("module {{.ModulePath}}\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
 	setNewCmdFlags(t, srcDir, "foo/../bar", true)
 
 	err := newCmd.RunE(newCmd, []string{"myapp"})
@@ -489,5 +520,27 @@ func TestNewCmdClonesRemoteTemplate(t *testing.T) {
 	}
 	if string(gomod) != "module github.com/me/app\n" {
 		t.Errorf("go.mod = %q; want rendered from cloned template", string(gomod))
+	}
+}
+
+func TestNewCmdPinsDefaultTemplateTag(t *testing.T) {
+	chdir(t, t.TempDir())
+	orig := runExternalCommand
+	defer func() { runExternalCommand = orig }()
+	var call string
+	runExternalCommand = func(_ string, name string, args ...string) error {
+		call = name + " " + strings.Join(args, " ")
+		if name == "git" && args[0] == "clone" {
+			return os.WriteFile(filepath.Join(args[len(args)-1], "go.mod"), []byte("module {{.ModulePath}}\n"), 0644)
+		}
+		return nil
+	}
+	setNewCmdFlags(t, "./templates", "github.com/me/pinned", true)
+	if err := newCmd.RunE(newCmd, []string{"pinned"}); err != nil {
+		t.Fatalf("newCmd.RunE() error: %v", err)
+	}
+	want := "git clone --branch v1.2.0 --depth 1 https://github.com/rushairer/gouno-template"
+	if !strings.HasPrefix(call, want) {
+		t.Fatalf("clone call = %q; want prefix %q", call, want)
 	}
 }

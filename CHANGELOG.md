@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+## [1.2.0] - 2026-08-24
+
+### Added
+
+- Add `--template-ref` for selecting an immutable remote template branch, tag, or commit.
+
+### Changed
+
+- Require Go 1.25.0 or newer and validate Go 1.25.x and 1.26.x in CI.
+- Default `gouno-cli new` now clones `gouno-template` at immutable `v1.2.0` with a shallow tag checkout instead of following its default branch.
+
+### Security
+
+- Add SHA-pinned shared quality and Conventional PR CI gates plus Dependabot.
+
 ## [1.1.1] - 2026-08-20
 
 ### Fixed

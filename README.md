@@ -8,6 +8,8 @@ A CLI tool to scaffold Go web projects from [gouno-template](https://github.com/
 
 ## Install
 
+Requires Go 1.25.0 or newer. CI validates Go 1.25.x and 1.26.x; Go 1.23/1.24 are unsupported.
+
 ```bash
 go install github.com/rushairer/gouno-cli@latest
 ```
@@ -28,7 +30,7 @@ go build -o gouno-cli .
 gouno-cli new my-service -m github.com/you/my-service
 ```
 
-This clones the default [gouno-template](https://github.com/rushairer/gouno-template), renders all template variables, and creates a ready-to-run project.
+This clones the default [gouno-template](https://github.com/rushairer/gouno-template) at immutable tag `v1.2.0`, renders all template variables, and creates a ready-to-run project.
 
 ```bash
 cd my-service
@@ -42,6 +44,7 @@ make dev
 |------|-------|---------|-------------|
 | `--module` | `-m` | project name | Go module path (e.g., `github.com/you/project`) |
 | `--template` | `-t` | `./templates` | Local path or git URL to template directory |
+| `--template-ref` | | empty | Immutable branch, tag, or commit ref for a remote template |
 | `--skip-tidy` | | `false` | Skip running `go mod tidy` after project creation |
 
 **Examples:**
@@ -51,7 +54,7 @@ make dev
 gouno-cli new my-api -m github.com/me/my-api
 
 # Use a custom template repository
-gouno-cli new my-app -t https://github.com/myorg/custom-template -m github.com/me/my-app
+gouno-cli new my-app -t https://github.com/myorg/custom-template --template-ref v1.0.0 -m github.com/me/my-app
 
 # Use a local template directory
 gouno-cli new my-app -t /path/to/local/template -m github.com/me/my-app
@@ -63,6 +66,8 @@ gouno-cli new my-app -t /path/to/local/template -m github.com/me/my-app
 (e.g. [gouno-template](https://github.com/rushairer/gouno-template)). You can
 point it to any git URL or local directory with `--template`; there is no local
 template registry to maintain.
+
+For reproducible remote builds, provide an immutable `--template-ref`. Custom remote templates without it retain their repository default-branch behavior.
 
 > Note: don't confuse a project template with a *template set*. A template set
 > is the collection of `.tmpl` scaffold files used by `gouno gen` (from the
