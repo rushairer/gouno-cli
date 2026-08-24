@@ -5,22 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
-
-### Changed
-
-- `gouno-cli new` now follows the template repository's default branch by default (including the default `gouno-template`); use `--template-ref` to pin an immutable branch or tag for reproducible builds.
-
 ## [1.2.0] - 2026-08-24
 
 ### Added
 
-- Add `--template-ref` for selecting an immutable remote template branch, tag, or commit.
+- Add `--template-ref` for pinning an immutable remote template branch or tag.
 
 ### Changed
 
 - Require Go 1.25.0 or newer and validate Go 1.25.x and 1.26.x in CI.
-- Default `gouno-cli new` now clones `gouno-template` at immutable `v1.2.0` with a shallow tag checkout instead of following its default branch.
+- `gouno-cli new` now follows the template repository's default branch by default (including the default `gouno-template`) with a shallow clone; use `--template-ref` to pin an immutable branch or tag for reproducible builds.
 
 ### Security
 
