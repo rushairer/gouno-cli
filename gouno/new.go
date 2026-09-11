@@ -31,9 +31,6 @@ var runExternalCommand = func(dir, name string, args ...string) error {
 	return externalCmd.Run()
 }
 
-// cloneTemplate clones a template repository into dest. An empty ref follows
-// the repository's default branch; otherwise the given immutable branch or tag
-// is checked out with a shallow clone.
 func cloneTemplate(repo, ref, dest string) error {
 	cloneArgs := []string{"clone"}
 	if ref != "" {
@@ -43,7 +40,6 @@ func cloneTemplate(repo, ref, dest string) error {
 	return runExternalCommand("", "git", cloneArgs...)
 }
 
-// validateProjectName 校验项目名：合法的目录名，不含路径穿越字符
 func validateProjectName(name string) error {
 	if name == "" {
 		return fmt.Errorf("project name cannot be empty")
@@ -60,9 +56,6 @@ func validateProjectName(name string) error {
 	return nil
 }
 
-// validateModulePath checks that a Go module path contains only valid characters.
-// This prevents YAML/template injection when the module path is rendered into
-// config files and source code.
 func validateModulePath(path string) error {
 	if path == "" {
 		return fmt.Errorf("module path cannot be empty")
@@ -70,13 +63,11 @@ func validateModulePath(path string) error {
 	if strings.ContainsAny(path, "\n\r\t") {
 		return fmt.Errorf("module path must not contain newlines or tabs")
 	}
-	// Go module paths: letters, digits, dots, slashes, hyphens, underscores
 	for _, c := range path {
 		if !unicode.IsLetter(c) && !unicode.IsDigit(c) && c != '/' && c != '.' && c != '-' && c != '_' {
 			return fmt.Errorf("module path contains invalid character %q", c)
 		}
 	}
-	// 每个路径段不能为空、"." 或 "..",否则 go mod tidy 会失败
 	for _, elem := range strings.Split(path, "/") {
 		if elem == "" || elem == "." || elem == ".." {
 			return fmt.Errorf("module path contains invalid path element %q", elem)
@@ -107,7 +98,6 @@ var newCmd = &cobra.Command{
 			return err
 		}
 
-		// Handle template directory logic
 		if strings.HasPrefix(templateDir, "git@") || strings.HasPrefix(templateDir, "https://") {
 			tempDir, err := os.MkdirTemp("", "gouno-template-")
 			if err != nil {
@@ -143,11 +133,7 @@ var newCmd = &cobra.Command{
 			fmt.Printf("Using local template directory: %s\n", templateDir)
 		}
 
-		data := TemplateData{
-			ModulePath:  modulePath,
-			ProjectName: projectName,
-		}
-
+		data := TemplateData{ModulePath: modulePath, ProjectName: projectName}
 		fmt.Printf("Creating new project '%s' with module path '%s' from template '%s'\n", projectName, modulePath, templateDir)
 
 		destDir := filepath.Join(".", projectName)
@@ -155,7 +141,7 @@ var newCmd = &cobra.Command{
 			return fmt.Errorf("directory %q already exists, refusing to overwrite", destDir)
 		}
 		if err := copyTemplate(templateDir, destDir, data); err != nil {
-			_ = os.RemoveAll(destDir) // 清理已创建的部分文件
+			_ = os.RemoveAll(destDir)
 			return fmt.Errorf("creating project: %w", err)
 		}
 
@@ -179,14 +165,12 @@ var newCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(newCmd)
-
 	newCmd.Flags().StringP("module", "m", "", "Go module path (e.g., github.com/your/project)")
 	newCmd.Flags().StringP("template", "t", "./templates", fmt.Sprintf("Path to the template directory (default will clone from %s)", defaultTemplateRepo))
 	newCmd.Flags().String("template-ref", "", "Immutable branch or tag for a remote template (default: follows the template's default branch)")
 	newCmd.Flags().Bool("skip-tidy", false, "Skip running go mod tidy after project creation")
 }
 
-// shouldSkipFile 判断是否跳过该文件/目录（检查路径中所有组件）
 func shouldSkipFile(relPath string) bool {
 	skipNames := map[string]bool{
 		".git":      true,
@@ -205,9 +189,13 @@ func shouldSkipFile(relPath string) bool {
 	return false
 }
 
-// isRenderableFile 判断文件是否需要进行模板渲染（仅含 {{ 的文本文件）
 func isRenderableFile(content string) bool {
 	return strings.Contains(content, "{{")
+}
+
+func isTemplateRuntimeResource(relPath string) bool {
+	cleaned := filepath.ToSlash(filepath.Clean(relPath))
+	return cleaned == ".gouno/codegen.yaml" || strings.HasPrefix(cleaned, ".gouno/codegen/")
 }
 
 func copyTemplate(src, dest string, data TemplateData) error {
@@ -220,7 +208,6 @@ func copyTemplate(src, dest string, data TemplateData) error {
 		if err != nil {
 			return err
 		}
-
 		destPath := filepath.Join(dest, relPath)
 
 		if shouldSkipFile(relPath) {
@@ -229,7 +216,6 @@ func copyTemplate(src, dest string, data TemplateData) error {
 			}
 			return nil
 		}
-
 		if info.IsDir() {
 			return os.MkdirAll(destPath, 0o755)
 		}
@@ -248,12 +234,12 @@ func copyTemplate(src, dest string, data TemplateData) error {
 		}
 		content := string(contentBytes)
 
-		// 仅对包含 {{ 的文件进行模板渲染，其余直接复制
 		var output string
-		if isRenderableFile(content) {
+		if isTemplateRuntimeResource(relPath) {
+			output = content
+		} else if isRenderableFile(content) {
 			tmpl, err := template.New("file").Parse(content)
 			if err != nil {
-				// 无法解析为模板（如 Go 代码中的 {{），直接复制原文
 				output = content
 			} else {
 				var buf strings.Builder
@@ -266,8 +252,6 @@ func copyTemplate(src, dest string, data TemplateData) error {
 			output = content
 		}
 
-		// 保留源文件可执行位（如模板中的 run.sh），但去掉 group/other 写位，
-		// 避免复制出 0777 这类过度宽松的权限。
 		if err := os.WriteFile(destPath, []byte(output), info.Mode().Perm()&0o755); err != nil {
 			return err
 		}
