@@ -7,10 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Changed
+## [1.2.1] - 2026-09-11
+
+### Fixed
 
 - Preserve `.gouno/codegen.yaml` and `.gouno/codegen/**` verbatim when creating projects so template-owned runtime codegen expressions are not consumed by the project-bootstrap renderer.
-- Keep project-template rendering and runtime codegen rendering as separate stages with separate ownership.
+- Ensure projects created from Codegen v1 templates retain their dynamic `gen` capabilities by keeping project-template rendering and runtime codegen rendering as separate stages.
 
 ## [1.2.0] - 2026-08-24
 
