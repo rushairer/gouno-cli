@@ -38,7 +38,7 @@ generators:
 type {{ .Args.name }}Service struct{}
 `
 	for path, content := range map[string]string{
-		filepath.Join(src, ".gouno", "codegen.yaml"):         manifest,
+		filepath.Join(src, ".gouno", "codegen.yaml"):            manifest,
 		filepath.Join(src, ".gouno", "codegen", "service.tmpl"): tmpl,
 	} {
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -53,7 +53,7 @@ type {{ .Args.name }}Service struct{}
 		t.Fatal(err)
 	}
 	for rel, want := range map[string]string{
-		filepath.Join(".gouno", "codegen.yaml"):         manifest,
+		filepath.Join(".gouno", "codegen.yaml"):            manifest,
 		filepath.Join(".gouno", "codegen", "service.tmpl"): tmpl,
 	} {
 		got, err := os.ReadFile(filepath.Join(dst, rel))
