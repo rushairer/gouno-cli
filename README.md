@@ -4,7 +4,9 @@
 
 ---
 
-A CLI tool to scaffold Go web projects from [gouno-template](https://github.com/rushairer/gouno-template).
+An architecture-agnostic CLI for scaffolding Go projects from full project-template repositories or local directories.
+
+`gouno-cli` owns project bootstrap mechanics. It does **not** prescribe application architecture, framework choice, or code-generator policy. The official [gouno-template](https://github.com/rushairer/gouno-template) is the default reference template, not the definition of what a Gouno project must look like.
 
 ## Install
 
@@ -24,60 +26,103 @@ go build -o gouno-cli .
 
 ## Usage
 
-### Create a New Project
+### Create a new project
 
 ```bash
 gouno-cli new my-service -m github.com/you/my-service
 ```
 
-This clones the default [gouno-template](https://github.com/rushairer/gouno-template) from its latest default branch, renders all template variables, and creates a ready-to-run project. To pin a specific template version for reproducible builds, pass `--template-ref` (see below).
+With the default settings, `gouno-cli` uses a local `./templates` directory when one exists; otherwise it clones the official [gouno-template](https://github.com/rushairer/gouno-template) default branch.
 
 ```bash
 cd my-service
 make dev
-# → http://localhost:8080
 ```
 
 **Flags:**
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--module` | `-m` | project name | Go module path (e.g., `github.com/you/project`) |
-| `--template` | `-t` | `./templates` | Local path or git URL to template directory |
-| `--template-ref` | | empty | Immutable branch or tag for a remote template; empty follows the template's default branch |
-| `--skip-tidy` | | `false` | Skip running `go mod tidy` after project creation |
+| `--module` | `-m` | project name | Go module path (for example `github.com/you/project`) |
+| `--template` | `-t` | `./templates` | Local template directory or supported Git repository URL |
+| `--template-ref` | | empty | Branch/tag selector for a remote template; empty follows its default branch |
+| `--skip-tidy` | | `false` | Skip `go mod tidy` after project creation |
 
 **Examples:**
 
 ```bash
-# Use the default template (latest default branch)
+# Official default template
 gouno-cli new my-api -m github.com/me/my-api
 
-# Use a custom template repository (latest default branch)
-gouno-cli new my-app -t https://github.com/myorg/custom-template -m github.com/me/my-app
+# Custom remote template
+gouno-cli new my-app \
+  -t https://github.com/myorg/custom-gouno-template \
+  -m github.com/me/my-app
 
-# Pin an immutable template version for reproducible builds
-gouno-cli new my-app -t https://github.com/myorg/custom-template --template-ref v1.0.0 -m github.com/me/my-app
+# Pin a released template for reproducible scaffolding
+gouno-cli new my-app \
+  -t https://github.com/myorg/custom-gouno-template \
+  --template-ref v1.0.0 \
+  -m github.com/me/my-app
 
-# Use a local template directory
-gouno-cli new my-app -t /path/to/local/template -m github.com/me/my-app
+# Local template directory
+gouno-cli new my-app \
+  -t /path/to/local/template \
+  -m github.com/me/my-app
 ```
 
-### About Project Templates
+For repeatable project creation, prefer an immutable release tag for `--template-ref` rather than a moving branch.
 
-`gouno-cli new` uses a project template — a full Go project skeleton repository
-(e.g. [gouno-template](https://github.com/rushairer/gouno-template)). You can
-point it to any git URL or local directory with `--template`; there is no local
-template registry to maintain.
+## Project templates and Codegen
 
-By default, `gouno-cli new` clones the template repository's latest default branch — this applies to both the default template and custom remote templates. For reproducible remote builds, pin an immutable branch or tag with `--template-ref` (e.g. `--template-ref v1.2.0`).
+A **project template** is a complete project skeleton consumed by `gouno-cli new`. It can choose any project structure and technology stack that satisfies the bootstrap contract.
 
-> Note: don't confuse a project template with a *template set*. A template set
-> is the collection of `.tmpl` scaffold files used by `gouno gen` (from the
-> [gouno](https://github.com/rushairer/gouno) library) to generate code — it is
-> a different concept and not part of gouno-cli.
+Code generation is optional and belongs to the template/project, not to `gouno-cli` and not to a built-in DDD catalog in Gouno Core.
 
-### Version
+A Codegen-enabled template can ship:
+
+```text
+.gouno/
+├── codegen.yaml
+└── codegen/
+    └── ...
+```
+
+These Codegen v1 resources are copied verbatim during project bootstrap so their second-stage template expressions remain intact. If a template does not provide `.gouno/codegen.yaml`, the generated project's CLI does not need to expose a `gen` command at all.
+
+See the normative [Project Template Contract v1](./docs/project-template-contract.md) for bootstrap behavior. The Codegen schema itself is owned by [gouno](https://github.com/rushairer/gouno/blob/main/docs/codegen-template-spec.md).
+
+For a user-facing guide to creating custom templates, see [Gouno Documentation](https://github.com/rushairer/gouno-doc/blob/main/template-authoring.md).
+
+## Two-stage template model
+
+Gouno projects may use two separate rendering stages:
+
+```text
+Stage 1: gouno-cli new
+  Project bootstrap
+  {{.ModulePath}} / {{.ProjectName}}
+
+Stage 2: gouno gen ... (optional)
+  Project-owned Codegen
+  args / flags / Codegen v1 template functions
+```
+
+`.gouno/codegen.yaml` and `.gouno/codegen/**` form an explicit raw-copy boundary between those stages.
+
+## How project bootstrap works
+
+1. Clone/read the selected full project template.
+2. Render ordinary bootstrap-template contents with `ModulePath` and `ProjectName` where applicable.
+3. Copy Codegen v1 runtime resources under `.gouno/codegen*` verbatim.
+4. Skip reserved/private paths such as `.git/`, `bin/`, `.env*`, `*.local.yaml`, and the legacy reserved `templates/` path.
+5. Preserve executable permissions subject to the bootstrap safety mask.
+6. Run `go mod tidy` unless `--skip-tidy` is set.
+7. Remove the partial destination if rendering or module tidying fails.
+
+The historical `templates/` filtering rule remains for compatibility; new Codegen resources belong under `.gouno/codegen/`.
+
+## Version
 
 ```bash
 gouno-cli version
@@ -85,21 +130,13 @@ gouno-cli version
 gouno-cli --version
 ```
 
-## How It Works
-
-1. `gouno-cli new` clones a template repository (default or specified).
-2. Files containing `{{` are rendered as Go templates using the provided module path and project name.
-3. Other files are copied as-is (skipping `.git/`, `templates/`, `bin/`).
-4. `go mod tidy` runs automatically unless `--skip-tidy` is set.
-5. On failure, all partially created files are cleaned up automatically.
-
 ## Related Projects
 
 | Repository | Description |
 |------------|-------------|
-| [gouno](https://github.com/rushairer/gouno) | Core library (includes code generation with built-in `.tmpl` templates) |
-| [gouno-template](https://github.com/rushairer/gouno-template) | Default project template |
-| [gouno-doc](https://github.com/rushairer/gouno-doc) | Documentation |
+| [gouno](https://github.com/rushairer/gouno) | Reusable mechanisms plus the Codegen protocol/runtime |
+| [gouno-template](https://github.com/rushairer/gouno-template) | Official default project template and reference Codegen policy |
+| [gouno-doc](https://github.com/rushairer/gouno-doc) | User, template-authoring, and engineering documentation |
 
 ## License
 
