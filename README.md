@@ -138,6 +138,10 @@ gouno-cli --version
 | [gouno-template](https://github.com/rushairer/gouno-template) | Official default project template and reference Codegen policy |
 | [gouno-doc](https://github.com/rushairer/gouno-doc) | User, template-authoring, and engineering documentation |
 
+## Security
+
+Please report vulnerabilities privately following [SECURITY.md](SECURITY.md). Avoid public exploit details before coordination.
+
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.
