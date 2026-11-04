@@ -16,5 +16,74 @@ concurrency:
 jobs:
   quality:
     uses: rushairer/gouno-doc/.github/workflows/go-module-quality.yml@c42f14e4307d727c97205d738be459e64691325d
+
+  default-template-integration:
+    name: Default template integration (Go ${{ matrix.go }})
+    needs: quality
+    strategy:
+      fail-fast: false
+      matrix:
+        go: ['1.26.x', '1.27.x']
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout CLI
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ matrix.go }}
+          cache-dependency-path: go.sum
+
+      - name: Build CLI
+        run: go build -o "${RUNNER_TEMP}/gouno-cli" .
+
+      - name: Bootstrap from the live default template
+        env:
+          CLI_BIN: ${{ runner.temp }}/gouno-cli
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          cd "$tmp"
+
+          "$CLI_BIN" new default-smoke -m example.com/default-smoke
+          cd default-smoke
+
+          grep -Fqx 'module example.com/default-smoke' <(head -n 1 go.mod)
+          test -f .gouno/codegen.yaml
+          grep -Fq '{{ camel (arg "name") }}' .gouno/codegen/service.tmpl
+
+          go run ./cmd gen service integration_service
+          test -f internal/service/integration_service.go
+
+          go run ./cmd gen suite integration_suite
+          test -f internal/domain/integration_suite.go
+          test -f internal/repository/integration_suite.go
+          test -f internal/service/integration_suite.go
+
+          go test -race ./...
+          go vet ./...
+
+      - name: Bootstrap from the latest released template tag
+        env:
+          CLI_BIN: ${{ runner.temp }}/gouno-cli
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          cd "$tmp"
+
+          "$CLI_BIN" new pinned-smoke \
+            --template https://github.com/rushairer/gouno-template \
+            --template-ref v1.3.0 \
+            --module example.com/pinned-smoke \
+            --skip-tidy
+
+          grep -Fqx 'module example.com/pinned-smoke' <(head -n 1 pinned-smoke/go.mod)
+          test -f pinned-smoke/.gouno/codegen.yaml
+          grep -Fq '{{ camel (arg "name") }}' pinned-smoke/.gouno/codegen/service.tmpl
+
   conventional-pr:
     uses: rushairer/gouno-doc/.github/workflows/conventional-pr.yml@813abc45f3c128ce0e4499de78e03f6d318c2c1d
