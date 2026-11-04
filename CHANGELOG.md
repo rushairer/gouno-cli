@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Require Go 1.26.0 or newer and validate Go 1.26.x / 1.27.x. This aligns the CLI toolchain with the default template so post-bootstrap go mod tidy does not depend on implicit toolchain downloads.
+
 ## [1.2.1] - 2026-09-11
 
 ### Fixed

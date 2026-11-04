@@ -10,7 +10,7 @@
 
 ## 安装
 
-需要 Go 1.25.0 或更高版本。CI 验证 Go 1.25.x 和 1.26.x；不再支持 Go 1.23/1.24。
+需要 Go 1.26.0 或更高版本。CI 验证 Go 1.26.x 和 1.27.x；Go 1.25 及更早版本不再支持。
 
 ```bash
 go install github.com/rushairer/gouno-cli@latest

@@ -54,3 +54,8 @@ Do not duplicate the normative Codegen schema here. Link to the authoritative sp
 Behavioral changes to project creation must have tests that exercise template copying/rendering and rollback semantics. Changes affecting `.gouno` resources must verify that Codegen expressions survive bootstrap unchanged.
 
 Follow all repository CI, lint, vet, race, vulnerability, and release requirements before merging.
+
+## Toolchain compatibility
+
+- The CLI requires Go 1.26.0 or newer so project bootstrap and the post-create `go mod tidy` step use a toolchain compatible with the official default template.
+- CI must validate the latest Go 1.26.x and 1.27.x patch releases. Keep README, CHANGELOG, release checklist, and the pinned shared quality workflow aligned with this baseline.
