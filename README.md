@@ -10,7 +10,7 @@ An architecture-agnostic CLI for scaffolding Go projects from full project-templ
 
 ## Install
 
-Requires Go 1.25.0 or newer. CI validates Go 1.25.x and 1.26.x; Go 1.23/1.24 are unsupported.
+Requires Go 1.26.0 or newer. CI validates Go 1.26.x and 1.27.x; Go 1.25 and earlier are unsupported.
 
 ```bash
 go install github.com/rushairer/gouno-cli@latest
