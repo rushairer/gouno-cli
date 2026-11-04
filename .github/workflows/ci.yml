@@ -15,6 +15,6 @@ concurrency:
 
 jobs:
   quality:
-    uses: rushairer/gouno-doc/.github/workflows/go-module-quality.yml@813abc45f3c128ce0e4499de78e03f6d318c2c1d
+    uses: rushairer/gouno-doc/.github/workflows/go-module-quality.yml@4d361a4612b679118b255be0e6f9a0345ba18467
   conventional-pr:
     uses: rushairer/gouno-doc/.github/workflows/conventional-pr.yml@813abc45f3c128ce0e4499de78e03f6d318c2c1d
