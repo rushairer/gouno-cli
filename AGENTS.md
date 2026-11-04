@@ -59,3 +59,8 @@ Follow all repository CI, lint, vet, race, vulnerability, and release requiremen
 
 - The CLI requires Go 1.26.0 or newer so project bootstrap and the post-create `go mod tidy` step use a toolchain compatible with the official default template.
 - CI must validate the latest Go 1.26.x and 1.27.x patch releases. Keep README, CHANGELOG, release checklist, and the pinned shared quality workflow aligned with this baseline.
+
+## Cross-repository integration gate
+
+- CI must exercise `gouno-cli new` against the live default branch of the official `gouno-template` on Go 1.26.x and 1.27.x. This gate must verify automatic `go mod tidy`, verbatim Codegen v1 resource preservation, representative individual and composition generators, race tests, and vet on the generated project.
+- CI must also verify `--template-ref` can bootstrap from the latest published template tag. Do not replace the live-default-branch check with a local fixture; unit tests and real cross-repository integration prove different contracts.
