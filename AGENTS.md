@@ -64,3 +64,7 @@ Follow all repository CI, lint, vet, race, vulnerability, and release requiremen
 
 - CI must exercise `gouno-cli new` against the live default branch of the official `gouno-template` on Go 1.26.x and 1.27.x. This gate must verify automatic `go mod tidy`, verbatim Codegen v1 resource preservation, representative individual and composition generators, race tests, and vet on the generated project.
 - CI must also verify `--template-ref` can bootstrap from the latest published template tag. Do not replace the live-default-branch check with a local fixture; unit tests and real cross-repository integration prove different contracts.
+
+## Go patch freshness
+
+- Every `actions/setup-go` step that uses a version range such as `1.26.x` or `1.27.x` must set `check-latest: true`. Hosted runner caches can otherwise select an older vulnerable patch that still satisfies the range. Keep govulncheck enabled and verify the actual selected standard-library version.
