@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
-
+- Require latest-patch selection (`check-latest: true`) for Go version ranges in CI to prevent stale runner caches from hiding standard-library security fixes.
 - Add a Go 1.26.x / 1.27.x end-to-end CI gate that creates a project from the live default template, exercises Codegen, and verifies bootstrap from a published template tag.
 - Require Go 1.26.0 or newer and validate Go 1.26.x / 1.27.x. This aligns the CLI toolchain with the default template so post-bootstrap go mod tidy does not depend on implicit toolchain downloads.
 
