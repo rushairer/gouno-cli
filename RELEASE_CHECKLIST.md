@@ -7,4 +7,5 @@
 - [ ] The CLI's real default-template integration workflow passes on Go 1.26.x and 1.27.x, including automatic tidy, Codegen v1 preservation, individual and composition generators, generated-project race tests, and vet.
 - [ ] `CHANGELOG.md` has the dated v1.3.0 release entry; target tag and release do not exist.
 - [ ] Confirm the release commit's module can be resolved through the public Go module proxy after tagging.
+- [ ] Publish the GitHub Release notes against the immutable v1.3.0 tag and verify the release page points to the same reviewed commit.
 - [ ] The worktree is clean and `git diff --check` passes.
