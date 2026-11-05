@@ -78,13 +78,23 @@ jobs:
 
           "$CLI_BIN" new pinned-smoke \
             --template https://github.com/rushairer/gouno-template \
-            --template-ref v1.3.0 \
-            --module example.com/pinned-smoke \
-            --skip-tidy
+            --template-ref v1.4.0 \
+            --module example.com/pinned-smoke
 
-          grep -Fqx 'module example.com/pinned-smoke' <(head -n 1 pinned-smoke/go.mod)
-          test -f pinned-smoke/.gouno/codegen.yaml
-          grep -Fq '{{ camel (arg "name") }}' pinned-smoke/.gouno/codegen/service.tmpl
+          cd pinned-smoke
+          grep -Fqx 'module example.com/pinned-smoke' <(head -n 1 go.mod)
+          test -f .gouno/codegen.yaml
+          grep -Fq '{{ camel (arg "name") }}' .gouno/codegen/service.tmpl
+
+          go run ./cmd gen service pinned_service
+          test -f internal/service/pinned_service.go
+          go run ./cmd gen suite pinned_suite
+          test -f internal/domain/pinned_suite.go
+          test -f internal/repository/pinned_suite.go
+          test -f internal/service/pinned_suite.go
+
+          go test -race ./...
+          go vet ./...
 
   conventional-pr:
     uses: rushairer/gouno-doc/.github/workflows/conventional-pr.yml@813abc45f3c128ce0e4499de78e03f6d318c2c1d

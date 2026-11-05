@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 - Add a Go 1.26.x / 1.27.x end-to-end CI gate that creates a project from the live default template, verifies Codegen v1 resource preservation, exercises individual and composition generators, and runs race tests and vet.
-- Verify `--template-ref` can bootstrap from a published immutable template tag.
+- Verify `--template-ref v1.4.0` bootstraps from the published immutable default-template release, performs automatic tidy, preserves Codegen resources, and passes individual/composition generation, race tests, and vet on both supported Go series.
 
 ## [1.2.1] - 2026-09-11
 
