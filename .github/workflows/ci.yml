@@ -97,4 +97,4 @@ jobs:
           go vet ./...
 
   conventional-pr:
-    uses: rushairer/gouno-doc/.github/workflows/conventional-pr.yml@813abc45f3c128ce0e4499de78e03f6d318c2c1d
+    uses: rushairer/gouno-doc/.github/workflows/conventional-pr.yml@fad499f7f28ff2e86d03d5c26ae6de127222d915
