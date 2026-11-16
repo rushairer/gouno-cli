@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   quality:
-    uses: rushairer/gouno-doc/.github/workflows/go-module-quality.yml@2ee6c0fd9847648d3fc6a53de3d9627202e5cf46
+    uses: rushairer/gouno-doc/.github/workflows/go-module-quality.yml@71a1b5230d60c85707de4e8584f742850966e356
 
   default-template-integration:
     name: Default template integration (Go ${{ matrix.go }})
